@@ -379,9 +379,9 @@ install_zeek() {
   # Environment variables
   NODECFG=/opt/zeek/etc/node.cfg
   if ! grep 'zeek' /etc/apt/sources.list.d/security:zeek.list &> /dev/null; then
-    sh -c "echo 'deb http://download.opensuse.org/repositories/security:/zeek/xUbuntu_20.04/ /' > /etc/apt/sources.list.d/security:zeek.list"
+    sh -c "echo 'deb http://download.opensuse.org/repositories/security:/zeek/xUbuntu_22.04/ /' > /etc/apt/sources.list.d/security:zeek.list"
   fi
-  wget -nv https://download.opensuse.org/repositories/security:zeek/xUbuntu_20.04/Release.key -O /tmp/Release.key 
+  wget -nv https://download.opensuse.org/repositories/security:zeek/xUbuntu_22.04/Release.key -O /tmp/Release.key 
   apt-key add - </tmp/Release.key &>/dev/null
   # Update APT repositories
   apt-get -qq -ym update
@@ -480,7 +480,7 @@ install_velociraptor() {
   echo "[$(date +%H:%M:%S)]: Cleanup velociraptor package building leftovers..."
   rm -rf /opt/velociraptor/logs
   echo "[$(date +%H:%M:%S)]: Installing the dpkg..."
-  if dpkg -i velociraptor_*_server.deb >/dev/null; then
+  if dpkg -i velociraptor_server_*_amd64.deb >/dev/null; then
     echo "[$(date +%H:%M:%S)]: Installation complete!"
   else
     echo "[$(date +%H:%M:%S)]: Failed to install the dpkg"
@@ -561,6 +561,34 @@ test_suricata_prerequisites() {
 }
 
 install_guacamole() {
+  echo "[$(date +%H:%M:%S)]: Setting up Guacamole..."
+  cd ~/ || exit 1
+  echo "[$(date +%H:%M:%S)]: Downloading Guacamole..."
+
+  VER=1.5.3
+
+  wget https://archive.apache.org/dist/guacamole/$VER/source/guacamole-server-$VER.tar.gz 
+  tar xzf guacamole-server-*.tar.gz
+  cd ~/guacamole-server-*/
+  ./configure --disable-guacenc --with-init-dir=/etc/init.d
+  make
+  sudo make install
+  sudo ldconfig
+  sudo mkdir  -p /etc/guacamole/{extensions,lib}
+  cp /vagrant/resources/guacamole/user-mapping.xml /etc/guacamole/
+  cp /vagrant/resources/guacamole/guacd.conf /etc/guacamole/
+
+  cd /var/lib/tomcat9/webapps || echo "[-] Unable to find the tomcat9/webapps folder."
+  wget https://dlcdn.apache.org/guacamole/$VER/binary/guacamole-$VER.war -O guacamole.war
+
+  sudo systemctl daemon-reload
+  sudo systemctl restart guacd
+  sudo systemctl enable guacd
+  systemctl enable tomcat9
+  systemctl start tomcat9
+}
+
+install_guacamole_old() {
   echo "[$(date +%H:%M:%S)]: Setting up Guacamole..."
   cd /opt || exit 1
   echo "[$(date +%H:%M:%S)]: Downloading Guacamole..."
